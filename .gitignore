@@ -1,0 +1,36 @@
+*.iml
+.gradle/
+/local.properties
+local.properties
+.idea/
+!.idea/codeStyles/
+!.idea/inspectionProfiles/
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# Build outputs
+app/build/
+**/build/
+*.apk
+*.aab
+*.ap_
+*.dex
+*.class
+
+# Keystore / signing — never commit
+*.jks
+*.keystore
+keystore.properties
+
+# Logs & tmp
+*.log
+logs/
+tmp/
+
+# OS / editors
+Thumbs.db
+*.swp
+.vscode/

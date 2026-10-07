@@ -57,11 +57,8 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
 
+    implementation(project(":logger"))
     implementation(libs.opentelemetry.api)
-    implementation(libs.opentelemetry.sdk)
-    implementation(libs.opentelemetry.sdk.logs)
-    implementation(libs.opentelemetry.exporter.otlp)
-    implementation(libs.opentelemetry.semconv)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

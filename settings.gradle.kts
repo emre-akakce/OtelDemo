@@ -21,4 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "OtelDemo"
 include(":app")
- 
+include(":logger")

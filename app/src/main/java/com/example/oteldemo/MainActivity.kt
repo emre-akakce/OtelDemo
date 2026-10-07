@@ -20,10 +20,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.oteldemo.otel.AppLogger
-import com.example.oteldemo.otel.LogDetails
-import com.example.oteldemo.otel.OtelInitializer
+import com.example.oteldemo.logger.application.Logger
 import com.example.oteldemo.ui.theme.OtelDemoTheme
+import io.opentelemetry.api.trace.StatusCode
+import io.opentelemetry.api.trace.Tracer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -31,8 +31,13 @@ import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
-    private val logger by lazy { AppLogger("android-oteldemo") }
-    private val tracer by lazy { OtelInitializer.get().getTracer("android-oteldemo") }
+
+    private val logger: Logger by lazy {
+        (application as OtelApplication).loggerFactory.create("MainActivity")
+    }
+    private val tracer: Tracer by lazy {
+        (application as OtelApplication).tracerFactory.get("MainActivity")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,7 +49,7 @@ class MainActivity : ComponentActivity() {
                         onRoot = ::doRoot,
                         onWork = ::doWork,
                         onError = ::doError,
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier.padding(innerPadding),
                     )
                 }
             }
@@ -54,7 +59,7 @@ class MainActivity : ComponentActivity() {
     private fun doRoot(setStatus: (String) -> Unit) {
         val span = tracer.spanBuilder("root").startSpan()
         try {
-            logger.info(LogDetails(title = "root", message = "root hit"))
+            logger.information("root hit", "endpoint" to "/")
             setStatus("root OK")
         } finally {
             span.end()
@@ -67,14 +72,12 @@ class MainActivity : ComponentActivity() {
             val start = System.currentTimeMillis()
             withContext(Dispatchers.Default) { delay(50L + Random.nextLong(150)) }
             val duration = System.currentTimeMillis() - start
-            logger.info(
-                LogDetails(
-                    title = "work-completed",
-                    message = "/work finished in ${duration}ms",
-                    endpoint = "/work",
-                    status = 200,
-                    durationMs = duration,
-                )
+            span.setAttribute("work.duration_ms", duration)
+            logger.information(
+                "/work finished in {durationMs}ms",
+                "endpoint" to "/work",
+                "status" to 200,
+                "durationMs" to duration,
             )
             setStatus("work OK (${duration}ms)")
         } finally {
@@ -85,15 +88,15 @@ class MainActivity : ComponentActivity() {
     private fun doError(setStatus: (String) -> Unit) {
         val span = tracer.spanBuilder("error").startSpan()
         try {
+            val boom = RuntimeException("boom")
+            span.recordException(boom)
+            span.setStatus(StatusCode.ERROR, "intentional failure")
             logger.error(
-                LogDetails(
-                    title = "error-endpoint",
-                    message = "intentional failure",
-                    endpoint = "/error",
-                    status = 500,
-                )
+                "intentional failure at {endpoint}",
+                "endpoint" to "/error",
+                "status" to 500,
+                error = boom,
             )
-            span.setAttribute("error", true)
             setStatus("error emitted")
         } finally {
             span.end()
@@ -117,7 +120,7 @@ fun DemoScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text("OTel Demo — status: $status")
-        Button(onClick = { onRoot { status = it } })  { Text("Root") }
+        Button(onClick = { onRoot { status = it } }) { Text("Root") }
         Button(onClick = { scope.launch { onWork { status = it } } }) { Text("Work") }
         Button(onClick = { onError { status = it } }) { Text("Error") }
     }
